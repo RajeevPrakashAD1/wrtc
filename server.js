@@ -22,11 +22,9 @@ const configuration = { iceServers: [ { urls: 'stun:stun.l.google.com:19302' } ]
 
 // let remoteStream;
 
-
 let senderStream;
 
-
-console.log('fdkjdf;ls');
+//console.log('fdkjdf;ls');
 
 io.on('connection', (socket) => {
 	// const id = v4();
@@ -38,7 +36,7 @@ io.on('connection', (socket) => {
 		console.log(data, 'create_room');
 		// var rooms = io.sockets.adapter.rooms;
 		// let room = rooms.get(data.roomId);
-		socket.join(data.roomId);
+		//socket.join(data.roomId);
 
 		roomId = data.roomId;
 
@@ -46,7 +44,7 @@ io.on('connection', (socket) => {
 		let localSteam;
 
 		socket.on('offer', async function(offer, roomId) {
-			console.log(offer);
+			console.log(offer, 'offer');
 			peerConnection.setRemoteDescription(new wrtc.RTCSessionDescription(offer));
 			const answer = await peerConnection.createAnswer();
 			await peerConnection.setLocalDescription(answer);
@@ -84,12 +82,9 @@ io.on('connection', (socket) => {
 		// convertedStream.getTracks().forEach((track) => {
 		// 	peerConnection.addTrack(track, convertedStream);
 		// });
-        peerConnection.ontrack = (e) => {
-        
-                senderStream = e.streams[0];
-            
-            
-        };
+		peer.ontrack = (e) => {senderStream = e.streams[0]};
+
+		console.log(senderStream, 'senderStream');
 
 		socket.emit('room_id', data.roomId);
 		roomId = data.roomId;
@@ -99,18 +94,19 @@ io.on('connection', (socket) => {
 		//socket.broadcast.to(data.roomId).emit('message', 'A new user has joined');
 	});
 
-	socket.on('join_room', (data) => {
+	socket.on('join_room', async (data) => {
 		console.log(data, 'join_room');
-		socket.join(data.roomId);
+
+		//socket.join(data.roomId);
 
 		socket.broadcast.to(data.roomId).emit('joined', `${data.name} joined room`);
 
-		const peer = new RTCPeerConnection(configuration);
+		const peer = new wrtc.RTCPeerConnection(configuration);
 		let localSteam;
 
 		socket.on('offer', async function(offer, roomId) {
-			console.log(offer);
-			peer.setRemoteDescription(new RTCSessionDescription(offer));
+			console.log(offer, 'offer');
+			peer.setRemoteDescription(new wrtc.RTCSessionDescription(offer));
 			const answer = await peerConnection.createAnswer();
 			await peerConnection.setLocalDescription(answer);
 			socket.emit({ answer: answer });
@@ -147,40 +143,40 @@ io.on('connection', (socket) => {
 		// convertedStream.getTracks().forEach((track) => {
 		// 	peerConnection.addTrack(track, convertedStream);
 		// });
-        senderStream.getTracks().forEach(track => peer.addTrack(track, senderStream));
+		senderStream.getTracks().forEach((track) => peer.addTrack(track, senderStream));
 
 		socket.emit('room_id', data.roomId);
 	});
 
-	socket.on('send_message', (message) => {
-		console.log('msg aya---(s)', roomId, message);
-		socket.broadcast.to(roomId).emit('room_message', message);
-	});
+	console.log(socket.id, 'has joined...ouside');
+
+	// socket.on('send_message', (message) => {
+	// 	console.log('msg aya---(s)', roomId, message);
+	// 	socket.broadcast.to(roomId).emit('room_message', message);
+	// });
 
 	socket.on('disconnect', () => {
 		console.log('disonnected on user..');
-		socket.emit('message', 'one user disconnected..');
-		io.emit('message', 'io disconnected');
 	});
 
-	// socket.on('join_room', (data) => {
-	// 	console.log('id', roomId);
+	// // socket.on('join_room', (data) => {
+	// // 	console.log('id', roomId);
 
-	// 	io.to(roomId).emit('someone joined room');
-	// 	socket.emit('user_joined', `${data} joined room`);
+	// // 	io.to(roomId).emit('someone joined room');
+	// // 	socket.emit('user_joined', `${data} joined room`);
+	// // });
+
+	// socket.on('send', (message) => {
+	// 	console.log('msg send', message);
+	// 	socket.broadcast.emit('recieve', { message: message, name: user[socket.id] });
 	// });
 
-	socket.on('send', (message) => {
-		console.log('msg send', message);
-		socket.broadcast.emit('recieve', { message: message, name: user[socket.id] });
-	});
-
-	console.log(socket.id, 'has joined');
-	socket.on('create_room', (data) => {
-		console.log(data);
-	});
-	socket.emit('got', 'hello');
+	// socket.on('create_room', (data) => {
+	// 	//console.log(data);
+	// });
+	// socket.emit('got', 'hello');
 });
+
 
 console.log('yaha aya');
 server.listen(port, '0.0.0.0', () => {
