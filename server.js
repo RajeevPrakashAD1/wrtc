@@ -48,7 +48,7 @@ io.on('connection', (socket) => {
         //socket.emit("room_created",1);
 
         socket.on('offer', async function(offer) {
-            //console.log(offer, 'offer');
+            console.log(offer, 'offer ?????????????????????????????????????????????????????????????????????');
 
             host.setRemoteDescription(new wrtc.RTCSessionDescription(offer));
             const answer = await host.createAnswer();
@@ -84,6 +84,8 @@ io.on('connection', (socket) => {
                 senderStream.addTrack(track);
             });
         };
+        
+        console.log(senderStream,"sssssssssssssssssssssssssss");
 
         // peerConnection.addEventListener('track', async (event) => {
         // 	remoteStream.addTrack(event.track, remoteStream);
