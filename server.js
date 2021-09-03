@@ -47,13 +47,13 @@ io.on('connection', (socket) => {
 
         //socket.emit("room_created",1);
 
-        socket.on('host_offer', async function(offer) {
+        socket.on('offer', async function(offer) {
             //console.log(offer, 'offer');
 
             host.setRemoteDescription(new wrtc.RTCSessionDescription(offer));
             const answer = await host.createAnswer();
             await host.setLocalDescription(answer);
-            socket.emit('host_answer', answer);
+            socket.emit('answer', answer);
             // host.ontrack = (e) => handleTrackEvent(e,host);
             // AllOffer[1] = offer;
             // socket.emit("req_offer",offer);
@@ -61,13 +61,13 @@ io.on('connection', (socket) => {
 
         host.addEventListener('icecandidate', (event) => {
             if (event.candidate) {
-                socket.emit('host_server_ice_candidate', event.candidate);
+                socket.emit('server_ice_candidate', event.candidate);
             }
         });
 
-        socket.on('host_ice_candidate', async(data) => {
+        socket.on('client_ice_candidate', async(data) => {
             console.log('.............candidate', data);
-            socket.emit('req_ice_candidate', data);
+            //socket.emit('req_ice_candidate', data);
 
             if (data) {
                 try {
@@ -79,6 +79,7 @@ io.on('connection', (socket) => {
         });
 
         host.ontrack = (e) => {
+            console.log("tracks comming in host");
             e.streams[0].getTracks().forEach((track) => {
                 senderStream.addTrack(track);
             });
@@ -113,26 +114,26 @@ io.on('connection', (socket) => {
         console.log(data, 'join_room');
         const peerConnection = new wrtc.RTCPeerConnection(configuration);
 
-        socket.on('mem_offer', async(offer) => {
-            console.log(offer, 'offer..............');
+        socket.on('offer', async(offer) => {
+            console.log(offer, 'offer.............. join room');
 
             peerConnection.setRemoteDescription(new wrtc.RTCSessionDescription(offer));
             const answer = await peerConnection.createAnswer();
-            console.log('ans............', answer);
+            console.log('ans............jr', answer);
             await peerConnection.setLocalDescription(answer);
-            socket.emit('mem_answer', answer);
+            socket.emit('answer', answer);
         });
 
         peerConnection.addEventListener('icecandidate', (event) => {
             // console.log(event.candidate,'candidates got.........');
 
             if (event.candidate) {
-                socket.emit('mem_server_ice_candidate', event.candidate);
+                socket.emit('server_ice_candidate', event.candidate);
             }
         });
 
-        socket.on('mem_client_ice_candidate', async(data) => {
-            console.log('candiate............', data);
+        socket.on('client_ice_candidate', async(data) => {
+            console.log('candiate......jr......', data);
 
             if (data) {
                 try {
@@ -221,7 +222,7 @@ function handleTrackEvent(e, host) {
         console.log('tek', track);
     });
 }
-//rajeev new changes
+
 console.log('yaha aya');
 server.listen(port, '0.0.0.0', () => {
     console.log(`server started on ${port}`);
