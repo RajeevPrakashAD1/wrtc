@@ -25,7 +25,7 @@ const configuration = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] }
 
 // let remoteStream;
 
-let senderStream = new wrtc.MediaStream();
+let senderStream ;
 
 //console.log('fdkjdf;ls');
 
