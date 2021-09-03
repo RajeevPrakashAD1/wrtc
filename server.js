@@ -1,7 +1,8 @@
 const express = require('express');
 var http = require('http');
+const { SocketAddress } = require('net');
 const app = express();
-const port = process.env.PORT || 6001;
+const port = process.env.PORT || 8000;
 var server = http.createServer(app);
 // var io = require('socket.io')(server);
 
@@ -17,12 +18,14 @@ const user = {};
 let roomId = 'ddfdf';
 
 console.log('server renderd');
+let AllOffer = {};
+let candidate = [];
 
 const configuration = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
 
 // let remoteStream;
 
-let senderStream;
+let senderStream = new wrtc.MediaStream();
 
 //console.log('fdkjdf;ls');
 
@@ -38,36 +41,48 @@ io.on('connection', (socket) => {
         // let room = rooms.get(data.roomId);
         //socket.join(data.roomId);
 
-        roomId = data.roomId;
+        // roomId = data.roomId;
 
-        const peerConnection = new wrtc.RTCPeerConnection(configuration);
-        let localSteam;
+        const host = new wrtc.RTCPeerConnection(configuration);
 
-        socket.on('offer', async function(offer, roomId) {
-            console.log(offer, 'offer');
-            peerConnection.setRemoteDescription(new wrtc.RTCSessionDescription(offer));
-            const answer = await peerConnection.createAnswer();
-            await peerConnection.setLocalDescription(answer);
-            socket.emit({ answer: answer });
+        //socket.emit("room_created",1);
+
+        socket.on('host_offer', async function(offer) {
+            //console.log(offer, 'offer');
+
+            host.setRemoteDescription(new wrtc.RTCSessionDescription(offer));
+            const answer = await host.createAnswer();
+            await host.setLocalDescription(answer);
+            socket.emit('host_answer', answer);
+            // host.ontrack = (e) => handleTrackEvent(e,host);
+            // AllOffer[1] = offer;
+            // socket.emit("req_offer",offer);
         });
 
-        // peerConnection.addEventListener('icecandidate', (event) => {
-        // 	if (event.candidate) {
-        // 		socket.emit('ice_candidate', event.candidate);
-        // 	}
-        // });
+        host.addEventListener('icecandidate', (event) => {
+            if (event.candidate) {
+                socket.emit('host_server_ice_candidate', event.candidate);
+            }
+        });
 
-        // socket.on('iceCandidate', async (data) => {
-        // 	console.log('candiate', data);
+        socket.on('host_ice_candidate', async(data) => {
+            console.log('.............candidate', data);
+            socket.emit('req_ice_candidate', data);
 
-        // 	if (data) {
-        // 		try {
-        // 			await peerConnection.addIceCandidate(data);
-        // 		} catch (e) {
-        // 			console.error('Error adding received ice candidate', e);
-        // 		}
-        // 	}
-        // });
+            if (data) {
+                try {
+                    await host.addIceCandidate(data);
+                } catch (e) {
+                    console.error('Error adding received ice candidate', e);
+                }
+            }
+        });
+
+        host.ontrack = (e) => {
+            e.streams[0].getTracks().forEach((track) => {
+                senderStream.addTrack(track);
+            });
+        };
 
         // peerConnection.addEventListener('track', async (event) => {
         // 	remoteStream.addTrack(event.track, remoteStream);
@@ -82,53 +97,71 @@ io.on('connection', (socket) => {
         // convertedStream.getTracks().forEach((track) => {
         // 	peerConnection.addTrack(track, convertedStream);
         // });
-        peer.ontrack = (e) => { senderStream = e.streams[0] };
+        //
 
-        console.log(senderStream, 'senderStream');
+        // console.log(senderStream, 'senderStream');
 
-        socket.emit('room_id', data.roomId);
-        roomId = data.roomId;
+        // socket.emit('room_id', data.roomId);
+        // roomId = data.roomId;
 
-        socket.broadcast.to(data.roomId).emit('created', `$(data.name) created room`);
+        // socket.broadcast.to(data.roomId).emit('created', `$(data.name) created room`);
 
         //socket.broadcast.to(data.roomId).emit('message', 'A new user has joined');
     });
 
     socket.on('join_room', async(data) => {
         console.log(data, 'join_room');
+        const peerConnection = new wrtc.RTCPeerConnection(configuration);
 
-        //socket.join(data.roomId);
+        socket.on('mem_offer', async(offer) => {
+            console.log(offer, 'offer..............');
+
+            peerConnection.setRemoteDescription(new wrtc.RTCSessionDescription(offer));
+            const answer = await peerConnection.createAnswer();
+            console.log('ans............', answer);
+            await peerConnection.setLocalDescription(answer);
+            socket.emit('mem_answer', answer);
+        });
+
+        peerConnection.addEventListener('icecandidate', (event) => {
+            // console.log(event.candidate,'candidates got.........');
+
+            if (event.candidate) {
+                socket.emit('mem_server_ice_candidate', event.candidate);
+            }
+        });
+
+        socket.on('mem_client_ice_candidate', async(data) => {
+            console.log('candiate............', data);
+
+            if (data) {
+                try {
+                    await peerConnection.addIceCandidate(data);
+                } catch (e) {
+                    console.error('Error adding received ice candidate', e);
+                }
+            }
+        });
+
+        senderStream.getTracks().forEach((track) => {
+            console.log(track, '===track===');
+            peerConnection.addTrack(track, senderStream);
+        });
+
+        //  socket.on("send_answer",data=>{
+        // 	socket.emit("answer",data);
+
+        // });
+
+        // socket.on("mem_client_ice_candidate",data=>{
+        // 	socket.on("mem_ice_candidate",data);
+        // })
+
+        socket.join(data.roomId);
 
         socket.broadcast.to(data.roomId).emit('joined', `${data.name} joined room`);
 
-        const peer = new wrtc.RTCPeerConnection(configuration);
-        let localSteam;
-
-        socket.on('offer', async function(offer, roomId) {
-            console.log(offer, 'offer');
-            peer.setRemoteDescription(new wrtc.RTCSessionDescription(offer));
-            const answer = await peerConnection.createAnswer();
-            await peerConnection.setLocalDescription(answer);
-            socket.emit({ answer: answer });
-        });
-
-        // peerConnection.addEventListener('icecandidate', (event) => {
-        // 	if (event.candidate) {
-        // 		socket.emit('ice_candidate', event.candidate);
-        // 	}
-        // });
-
-        // socket.on('iceCandidate', async (data) => {
-        // 	console.log('candiate', data);
-
-        // 	if (data) {
-        // 		try {
-        // 			await peerConnection.addIceCandidate(data);
-        // 		} catch (e) {
-        // 			console.error('Error adding received ice candidate', e);
-        // 		}
-        // 	}
-        // });
+        // let localSteam;
 
         // peerConnection.addEventListener('track', async (event) => {
         // 	remoteStream.addTrack(event.track, remoteStream);
@@ -142,10 +175,11 @@ io.on('connection', (socket) => {
 
         // convertedStream.getTracks().forEach((track) => {
         // 	peerConnection.addTrack(track, convertedStream);
-        // });
-        senderStream.getTracks().forEach((track) => peer.addTrack(track, senderStream));
+        // // });
 
-        socket.emit('room_id', data.roomId);
+        console.log(senderStream, 'senderstream');
+
+        // socket.emit('room_id', data.roomId);
     });
 
     console.log(socket.id, 'has joined...ouside');
@@ -177,8 +211,18 @@ io.on('connection', (socket) => {
     // socket.emit('got', 'hello');
 });
 
+function handleTrackEvent(e, host) {
+    console.log(e, 'hte e');
+    senderStream = e.streams[0];
 
-console.log('yaha aya..........');
+    console.log(senderStream, 'sendersStream');
+
+    senderStream.getTracks().forEach((track) => {
+        console.log('tek', track);
+    });
+}
+
+console.log('yaha aya');
 server.listen(port, '0.0.0.0', () => {
     console.log(`server started on ${port}`);
 });
